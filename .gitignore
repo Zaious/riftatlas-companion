@@ -1,0 +1,8 @@
+# 打包給 Chrome 線上應用程式商店的產物
+*.zip
+
+# 編輯器與系統
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

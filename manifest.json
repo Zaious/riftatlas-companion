@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "Rift Atlas 助手 — 符文戰場編年史",
+    "version": "0.1.0",
+    "description": "在 Rift Atlas 模擬器上檢查牌組是否符合當前環境、把房號掛到公開布告欄，並看見其他人正在等的房間。",
+    "icons": {
+        "16": "icons/icon16.png",
+        "32": "icons/icon32.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://play.riftatlas.com/*"],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": ["storage"],
+    "host_permissions": ["https://riftbound.chroniclecore.com/*"]
+}
