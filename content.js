@@ -18,7 +18,6 @@
 (() => {
     "use strict";
 
-    const SITE = "https://riftbound.chroniclecore.com";
     const HOST_ID = "rbc-riftatlas-companion";
     const COLLAPSE_KEY = "rbc_panel_collapsed";
     const SOUND_KEY = "rbc_panel_sound";
@@ -320,13 +319,6 @@
             return `<div class="sec">${head}<p class="muted">在 Rift Atlas 建立房間之後，這裡就能把房號掛上布告欄。</p></div>`;
         }
 
-        if (!state.signedIn) {
-            return `<div class="sec">${head}
-                <div class="row"><span class="name"><code>${escapeHtml(code)}</code></span></div>
-                <p class="muted">要掛上布告欄，先在<a href="${SITE}/account" target="_blank" rel="noopener">編年史登入</a>——開一次網站就好，不用回來重整。</p>
-            </div>`;
-        }
-
         if (state.posted) {
             const left = minutesLeft(state.posted.expiresAt);
             return `<div class="sec">${head}
@@ -511,7 +503,6 @@
         sets: null,
         rooms: null,
         boardLabel: null,
-        signedIn: false,
         posted: null,
         busy: false,
         message: null,
@@ -530,7 +521,6 @@
             [...state.cards.keys()],
             state.rooms?.map((room) => room.roomCode) ?? null,
             Boolean(state.sets),
-            state.signedIn,
             state.posted ? minutesLeft(state.posted.expiresAt) : null,
             state.busy,
             state.message,
@@ -595,12 +585,6 @@
         renderIfChanged();
     }
 
-    async function refreshSession() {
-        const reply = await ask({ type: "session" });
-        state.signedIn = Boolean(reply.ok && reply.data.signedIn);
-        renderIfChanged();
-    }
-
     async function loadSets() {
         const reply = await ask({ type: "cardSets" });
         if (!reply.ok) return;
@@ -617,12 +601,10 @@
         mount();
         render(state);
         void loadSets();
-        void refreshSession();
         void refreshBoard(state);
         refreshLocal();
         setInterval(refreshLocal, LOCAL_POLL_MS);
         setInterval(() => void refreshBoard(state), BOARD_POLL_MS);
-        setInterval(() => void refreshSession(), BOARD_POLL_MS);
     }
 
     if (document.body) start();

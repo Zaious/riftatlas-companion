@@ -6,8 +6,7 @@
  * 而且改了我們也不會知道的東西。service worker 沒有頁面 CSP，只受 manifest 的
  * host_permissions 管，於是這條路由是我們自己說了算。
  *
- * 也因為只有這裡連得出去，「這個擴充到底把什麼送去哪裡」看這一個檔就答得完：
- * 兩支 GET，沒有 POST，沒有任何頁面內容離開瀏覽器。
+ * 也因為只有這裡連得出去，「這個擴充到底把什麼送去哪裡」看這一個檔就答得完。
  */
 
 const SITE = "https://riftbound.chroniclecore.com";
@@ -37,6 +36,7 @@ async function siteOrigin() {
 /** 系列表一年只動幾次，存起來省得每次開頁都問。 */
 const SETS_CACHE_KEY = "cardSetsCache";
 const SETS_CACHE_MS = 24 * 60 * 60 * 1000;
+const OWNER_KEY = "ownerKey";
 
 async function getJson(path) {
     const response = await fetch(`${await siteOrigin()}${path}`, { credentials: "omit" });
@@ -54,7 +54,7 @@ async function loadCardSets() {
         await chrome.storage.local.set({ [SETS_CACHE_KEY]: { at: Date.now(), data } });
         return data;
     } catch (error) {
-        // 過期的表格仍然比沒有好：它唯一會過時的地方是「最新一彈算不算當前環境」,
+        // 過期的表格仍然比沒有好：它唯一會過時的地方是「最新一彈算不算當前環境」，
         // 而拿不到表格的話連判都不能判。
         if (entry) return entry.data;
         throw error;
@@ -62,38 +62,35 @@ async function loadCardSets() {
 }
 
 /**
- * 目前這台瀏覽器上，編年史的登入還有效嗎。
+ * 這台瀏覽器掛房間用的憑證，第一次要用的時候才產生。
  *
- * 留 60 秒緩衝：token 在送出的路上過期，換來的是一個看不懂的 401。
+ * 取代的是一整套登入：帶著同一把 key 才改得動同一間房，而使用者不必註冊、不必
+ * 登入、不必記任何東西。32 bytes 的密碼學亂數，要的就是「別人猜不到」。
+ *
+ * 伺服器只存它的 SHA-256，所以就算那張表被讀光，也還原不出任何一把 key。
+ *
+ * 換瀏覽器或清掉擴充資料就是另一把，舊的那間房於是改不動了——但它 20 分鐘後本來
+ * 就自己消失，實際上沒有代價。
  */
-async function liveSession() {
-    try {
-        const { chronicleSession } = await chrome.storage.local.get("chronicleSession");
-        if (!chronicleSession?.accessToken) return null;
-        if (chronicleSession.expiresAt && chronicleSession.expiresAt * 1000 < Date.now() + 60_000) return null;
-        return chronicleSession;
-    } catch {
-        return null;
-    }
+async function ownerKey() {
+    const stored = await chrome.storage.local.get(OWNER_KEY);
+    if (typeof stored[OWNER_KEY] === "string" && stored[OWNER_KEY].length >= 20) return stored[OWNER_KEY];
+
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    const key = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    await chrome.storage.local.set({ [OWNER_KEY]: key });
+    return key;
 }
 
-/** 寫入一律要登入。沒有 session 就直接說清楚，不要送出去換一個 401 回來。 */
-async function writeRoom(method, payload) {
-    const session = await liveSession();
-    if (!session) {
-        const error = new Error("請先在編年史登入（開一次網站即可）");
-        error.needsLogin = true;
-        throw error;
-    }
-
+/** 掛出／收掉。兩者都帶同一把憑證，伺服器據此決定動得了哪一列。 */
+async function writeRoom(method, room) {
     const response = await fetch(`${await siteOrigin()}/api/rooms`, {
         method,
         credentials: "omit",
-        headers: {
-            Authorization: `Bearer ${session.accessToken}`,
-            ...(payload ? { "Content-Type": "application/json" } : {}),
-        },
-        ...(payload ? { body: JSON.stringify(payload) } : {}),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...(room ?? {}), ownerKey: await ownerKey() }),
     });
 
     const data = await response.json().catch(() => ({}));
@@ -111,9 +108,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
                 ? () => writeRoom("POST", message.room)
                 : message?.type === "takeDown"
                   ? () => writeRoom("DELETE", null)
-                  : message?.type === "session"
-                    ? async () => ({ signedIn: Boolean(await liveSession()) })
-                    : null;
+                  : null;
 
     if (!handler) return false;
 
