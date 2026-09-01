@@ -61,9 +61,59 @@ async function loadCardSets() {
     }
 }
 
+/**
+ * 目前這台瀏覽器上，編年史的登入還有效嗎。
+ *
+ * 留 60 秒緩衝：token 在送出的路上過期，換來的是一個看不懂的 401。
+ */
+async function liveSession() {
+    try {
+        const { chronicleSession } = await chrome.storage.local.get("chronicleSession");
+        if (!chronicleSession?.accessToken) return null;
+        if (chronicleSession.expiresAt && chronicleSession.expiresAt * 1000 < Date.now() + 60_000) return null;
+        return chronicleSession;
+    } catch {
+        return null;
+    }
+}
+
+/** 寫入一律要登入。沒有 session 就直接說清楚，不要送出去換一個 401 回來。 */
+async function writeRoom(method, payload) {
+    const session = await liveSession();
+    if (!session) {
+        const error = new Error("請先在編年史登入（開一次網站即可）");
+        error.needsLogin = true;
+        throw error;
+    }
+
+    const response = await fetch(`${await siteOrigin()}/api/rooms`, {
+        method,
+        credentials: "omit",
+        headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+            ...(payload ? { "Content-Type": "application/json" } : {}),
+        },
+        ...(payload ? { body: JSON.stringify(payload) } : {}),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    return data;
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const handler =
-        message?.type === "rooms" ? () => getJson("/api/rooms") : message?.type === "cardSets" ? loadCardSets : null;
+        message?.type === "rooms"
+            ? () => getJson("/api/rooms")
+            : message?.type === "cardSets"
+              ? loadCardSets
+              : message?.type === "publish"
+                ? () => writeRoom("POST", message.room)
+                : message?.type === "takeDown"
+                  ? () => writeRoom("DELETE", null)
+                  : message?.type === "session"
+                    ? async () => ({ signedIn: Boolean(await liveSession()) })
+                    : null;
 
     if (!handler) return false;
 

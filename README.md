@@ -57,12 +57,16 @@ It reads pages on a site you don't own, so this should be stated plainly — and
 - `localStorage`, key `riftbound_simulator_last_room` — your current room code.
 - The image URLs of cards in the deck panel, to extract card numbers such as `OGN-004`. Card numbers rather than names, because the interface is Simplified Chinese and names don't map cleanly across localizations.
 
-**It makes exactly two GET requests**, both to `riftbound.chroniclecore.com`, both without cookies (`credentials: "omit"`):
+**On riftbound.chroniclecore.com it reads one thing**: the Supabase session the site itself stores in `localStorage`, copied into extension storage by `auth-bridge.js`. That is how the panel can post a room on your behalf without asking you to log in again. It never sees your password — logging in happens on the site, and this only copies the resulting session. Log out and the copy is dropped.
 
-- `/api/rooms` — rooms currently posted to the board.
-- `/api/card-sets` — which set belongs to which wave, and which wave is currently on sale. Cached for a day. This lives on the site rather than being hardcoded here, so a new set releasing doesn't require you to update the extension.
+**It talks to `riftbound.chroniclecore.com` and nowhere else**, always without cookies (`credentials: "omit"`):
 
-**Nothing is ever sent out.** No POST, no telemetry, no analytics. Your decks, room codes and game state never leave the browser — pressing "post to the board" opens a tab with the room code in the URL, and you submit it yourself on the site. Every outbound request is in `background.js`; reading that one file tells you the whole story.
+- `GET /api/rooms` — rooms currently posted to the board.
+- `GET /api/card-sets` — which set belongs to which wave, and which wave is currently on sale. Cached for a day. This lives on the site rather than being hardcoded here, so a new set releasing doesn't require you to update the extension.
+- `POST /api/rooms` — **only when you press "post to the board"**, and it sends only what you filled in: room code, display name, format, match type and the optional note. Authenticated with the session above.
+- `DELETE /api/rooms` — only when you press "take down".
+
+**Your decks and game state are never sent anywhere.** The legality check runs entirely in your browser; the card numbers it reads are never transmitted. There is no telemetry and no analytics. Nothing leaves the browser except the fields you typed, at the moment you press the button. Every outbound request is in `background.js`; reading that one file tells you the whole story.
 
 ## What it doesn't do
 
