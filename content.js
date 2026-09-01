@@ -26,6 +26,8 @@
     const LOCAL_POLL_MS = 2000;
     /** 問布告欄的節奏。板上的房間以分鐘計，半分鐘一次綽綽有餘。 */
     const BOARD_POLL_MS = 30000;
+    /** 續掛的節奏。比 20 分鐘的到期短得多，人還在等就不該被下板。 */
+    const HEARTBEAT_MS = 5 * 60000;
 
     const ROOM_KEY = "riftbound_simulator_last_room";
     const NAME_KEY = "riftbound_simulator_player_name";
@@ -597,6 +599,43 @@
         render(state);
     }
 
+    /**
+     * 續掛。
+     *
+     * 掛出去的房間 20 分鐘後到期，而人可能等更久——沒有這個，面板掛的房間會在
+     * 使用者還坐在那裡等的時候從板上消失。分頁關掉、電腦睡著，續掛跟著停，房間
+     * 於是自然到期，這正是我們要的。
+     */
+    async function heartbeat() {
+        if (!state.posted) return;
+        const reply = await ask({
+            type: "publish",
+            room: {
+                roomCode: state.posted.roomCode,
+                nickname: state.posted.nickname,
+                format: state.posted.format,
+                matchMode: state.posted.matchMode,
+                note: state.posted.note ?? "",
+            },
+        });
+        if (reply.ok) state.posted = reply.data.room;
+    }
+
+    /**
+     * 離開這一頁就把房間收掉。
+     *
+     * 光靠到期不夠：關掉分頁之後房間還會在板上掛最多 20 分鐘，而那間房其實已經
+     * 不存在了——別人點進去會撲空，那是布告欄最傷信任的壞法。
+     *
+     * pagehide 而不是 beforeunload：後者在手機瀏覽器上常常不觸發，而且會被
+     * bfcache 判定為不可快取。送不出去也沒關係，到期仍然是兜底。
+     */
+    function releaseOnExit() {
+        window.addEventListener("pagehide", () => {
+            if (state.posted) void ask({ type: "takeDown" });
+        });
+    }
+
     function start() {
         mount();
         render(state);
@@ -605,6 +644,8 @@
         refreshLocal();
         setInterval(refreshLocal, LOCAL_POLL_MS);
         setInterval(() => void refreshBoard(state), BOARD_POLL_MS);
+        setInterval(() => void heartbeat(), HEARTBEAT_MS);
+        releaseOnExit();
     }
 
     if (document.body) start();
