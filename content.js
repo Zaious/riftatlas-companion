@@ -55,7 +55,16 @@
         try {
             const raw = localStorage.getItem(ROOM_KEY);
             if (!raw) return null;
-            return JSON.parse(raw)?.session ?? null;
+            const session = JSON.parse(raw)?.session ?? null;
+            /*
+              觀戰者不是這間房的人。
+
+              進去看別人打的時候，session 一樣帶著房號，只有 viewerRole 分得出
+              來——不擋的話，一個純粹來看的人可以把別人的房間掛上板，離開時還會
+              順手把它收掉。房間的狀態只該由坐在裡面打的人維護。
+            */
+            if (session && session.viewerRole && session.viewerRole !== "player") return null;
+            return session;
         } catch {
             return null;
         }
