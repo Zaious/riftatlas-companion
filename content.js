@@ -571,7 +571,22 @@
           點進別人的房間都不會誤觸。
         */
         const phase = state.session?.lastKnownPhase ?? null;
-        if (state.posted && lastPhase === "lobby" && phase && phase !== "lobby") beep("join");
+        if (state.posted && lastPhase === "lobby" && phase && phase !== "lobby") {
+            beep("join");
+            /*
+              有人進來就把房間收下板。
+
+              房間已經有對手了，還掛在「正在等對手」上，下一個點進來的人只會撲空
+              ——那比房間消失更傷。收掉是這一刻唯一誠實的動作。
+
+              失敗就算了：到期仍然會清掉它，最多多掛幾分鐘。
+            */
+            void ask({ type: "takeDown" }).then((reply) => {
+                if (!reply.ok) return;
+                state.posted = null;
+                void refreshBoard(state);
+            });
+        }
         if (previous || phase) lastPhase = phase;
 
         // 掉下板了。分頁一直開著的人不會看到那一刻，所以用聽的。
