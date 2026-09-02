@@ -38,8 +38,22 @@ const SETS_CACHE_KEY = "cardSetsCache";
 const SETS_CACHE_MS = 24 * 60 * 60 * 1000;
 const OWNER_KEY = "ownerKey";
 
+/**
+ * fetch 在連不上時拋的是 TypeError("Failed to fetch")——那句話對使用者毫無意義，
+ * 而它跟「伺服器回了錯誤」是完全不同的兩件事：前者是他那端連不出去（DNS、防火
+ * 牆、VPN、離線），後者我們會回一句中文說明。翻成看得懂的話，順便讓回報的人講
+ * 得出哪一種。
+ */
+async function fetchOrExplain(url, init) {
+    try {
+        return await fetch(url, init);
+    } catch {
+        throw new Error(chrome.i18n.getMessage("errNetwork") || "連不上編年史，檢查一下網路再試");
+    }
+}
+
 async function getJson(path) {
-    const response = await fetch(`${await siteOrigin()}${path}`, { credentials: "omit" });
+    const response = await fetchOrExplain(`${await siteOrigin()}${path}`, { credentials: "omit" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
 }
@@ -86,7 +100,7 @@ async function ownerKey() {
 
 /** 掛出／收掉。兩者都帶同一把憑證，伺服器據此決定動得了哪一列。 */
 async function writeRoom(method, room) {
-    const response = await fetch(`${await siteOrigin()}/api/rooms`, {
+    const response = await fetchOrExplain(`${await siteOrigin()}/api/rooms`, {
         method,
         credentials: "omit",
         headers: { "Content-Type": "application/json" },

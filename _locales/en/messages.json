@@ -181,5 +181,8 @@
     },
     "playingTag": {
         "message": "in game"
+    },
+    "errNetwork": {
+        "message": "Can't reach Riftbound Chronicle — check your connection"
     }
 }

@@ -181,5 +181,8 @@
     },
     "playingTag": {
         "message": "進行中"
+    },
+    "errNetwork": {
+        "message": "連不上編年史，檢查一下網路再試"
     }
 }
