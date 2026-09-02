@@ -1,0 +1,83 @@
+{
+    "extName": {
+        "message": "Rift Atlas 助手 — 符文戰場編年史",
+        "description": "商店與擴充管理頁顯示的名稱"
+    },
+    "extDescription": {
+        "message": "在 Rift Atlas 模擬器上檢查牌組是否符合當前環境、把房號掛到公開布告欄，並看見其他人正在等的房間。"
+    },
+
+    "panelTitle": { "message": "編年史助手" },
+    "waitingBadge": {
+        "message": "$COUNT$ 人在等",
+        "placeholders": { "count": { "content": "$1", "example": "3" } }
+    },
+
+    "myRoomHeading": { "message": "我的房間" },
+    "soundOff": { "message": "關掉提示音" },
+    "soundOn": { "message": "打開提示音" },
+    "noRoomYet": { "message": "在 Rift Atlas 建立房間之後，這裡就能把房號掛上布告欄。" },
+    "nicknameLabel": { "message": "你的稱呼" },
+    "nicknamePlaceholder": { "message": "小明" },
+    "formatLabel": { "message": "環境" },
+    "formatCurrent": {
+        "message": "只打$WAVE$",
+        "placeholders": { "wave": { "content": "$1", "example": "一彈" } }
+    },
+    "formatOpen": { "message": "不限" },
+    "matchLabel": { "message": "賽制" },
+    "noteLabel": { "message": "備註（選填）" },
+    "notePlaceholder": { "message": "新手，想找人陪練" },
+    "publishButton": { "message": "掛到布告欄等對手" },
+    "publishing": { "message": "掛出中…" },
+    "extendButton": {
+        "message": "再撐 $MINUTES$ 分鐘",
+        "placeholders": { "minutes": { "content": "$1", "example": "20" } }
+    },
+    "takeDownButton": { "message": "收掉" },
+    "boardTimeLeft": {
+        "message": "板上還有 $MINUTES$ 分鐘",
+        "placeholders": { "minutes": { "content": "$1", "example": "12" } }
+    },
+
+    "deckHeading": { "message": "牌組檢查" },
+    "deckAllLegal": {
+        "message": "✓ $COUNT$ 張卡都在$WAVE$以內",
+        "placeholders": {
+            "count": { "content": "$1", "example": "23" },
+            "wave": { "content": "$2", "example": "一彈" }
+        }
+    },
+    "deckOverLimit": {
+        "message": "✗ $COUNT$ 張超出$WAVE$",
+        "placeholders": {
+            "count": { "content": "$1", "example": "2" },
+            "wave": { "content": "$2", "example": "一彈" }
+        }
+    },
+    "deckMore": {
+        "message": "⋯還有 $COUNT$ 張",
+        "placeholders": { "count": { "content": "$1", "example": "4" } }
+    },
+    "deckUnknown": {
+        "message": "另有 $COUNT$ 張認不出系列，沒有計入。",
+        "placeholders": { "count": { "content": "$1", "example": "1" } }
+    },
+    "deckNoSets": { "message": "環境資料讀不到，暫時無法判定。" },
+
+    "boardHeading": { "message": "正在等對手" },
+    "boardHeadingCount": {
+        "message": "正在等對手（$COUNT$）",
+        "placeholders": { "count": { "content": "$1", "example": "3" } }
+    },
+    "boardEmpty": { "message": "現在沒有人在等。" },
+    "boardUnavailable": { "message": "讀不到布告欄。" },
+    "joinButton": { "message": "加入" },
+    "currentFormatFallback": { "message": "當前環境" },
+
+    "errNickname": { "message": "留個稱呼，對方才知道等的是誰。" },
+    "errPublish": { "message": "掛出去失敗了" },
+    "errTakeDown": { "message": "收掉失敗了" },
+    "errNoResponse": { "message": "沒有回應" },
+    "errReloaded": { "message": "擴充剛更新過，重新整理這一頁就好" }
+}

@@ -12,12 +12,16 @@
 
 ## 安裝
 
-還沒上架 Chrome 線上應用程式商店，目前用開發者模式載入：
+**[到 Chrome 線上應用程式商店安裝](https://chromewebstore.google.com/detail/iokbfhancpmkbfkclpeoppjmdllcgdef)** — 一鍵裝好，之後自動更新。
+
+或者用開發者模式載入自己的版本：
 
 1. 下載或 clone 這個資料夾。
 2. 開 `chrome://extensions`，右上角打開「開發人員模式」。
 3. 按「載入未封裝項目」，選這個資料夾。
 4. 重新整理 `play.riftatlas.com`，右下角會出現一條「編年史助手」，點一下展開。
+
+介面語言跟著瀏覽器走：預設繁體中文，其他語系顯示英文。
 
 面板預設收合，因為它站在 Rift Atlas 的「加入／觀戰」按鈕旁邊，展開時會擋到。收合那條會顯示現在有幾個人在等。
 

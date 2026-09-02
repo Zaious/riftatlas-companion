@@ -20,12 +20,16 @@ The board itself lives at [Riftbound Chronicle](https://riftbound.chroniclecore.
 
 ## Install
 
-Not on the Chrome Web Store yet. Load it unpacked:
+**[Get it from the Chrome Web Store](https://chromewebstore.google.com/detail/iokbfhancpmkbfkclpeoppjmdllcgdef)** — one click, updates automatically.
+
+Or load it unpacked, if you want to run your own build:
 
 1. Download or clone this folder.
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Click **Load unpacked** and select this folder.
 4. Reload `play.riftatlas.com`. A collapsed bar appears in the bottom-right; click it to expand.
+
+The interface follows your browser language: Traditional Chinese by default, English elsewhere.
 
 The panel starts collapsed because it sits next to Rift Atlas's own "join / spectate" controls and would cover them. The collapsed bar still shows how many people are currently waiting.
 

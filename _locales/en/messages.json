@@ -1,0 +1,83 @@
+{
+    "extName": {
+        "message": "Rift Atlas Companion — Riftbound Chronicle",
+        "description": "Name shown in the store and the extensions page"
+    },
+    "extDescription": {
+        "message": "Check your deck against the current format, post your room code to a public board, and see who else is waiting — on the Rift Atlas simulator."
+    },
+
+    "panelTitle": { "message": "Chronicle Companion" },
+    "waitingBadge": {
+        "message": "$COUNT$ waiting",
+        "placeholders": { "count": { "content": "$1", "example": "3" } }
+    },
+
+    "myRoomHeading": { "message": "My room" },
+    "soundOff": { "message": "Mute alerts" },
+    "soundOn": { "message": "Unmute alerts" },
+    "noRoomYet": { "message": "Create a room in Rift Atlas and you can post its code to the board from here." },
+    "nicknameLabel": { "message": "Your name" },
+    "nicknamePlaceholder": { "message": "Alex" },
+    "formatLabel": { "message": "Format" },
+    "formatCurrent": {
+        "message": "$WAVE$ only",
+        "placeholders": { "wave": { "content": "$1", "example": "Set 1" } }
+    },
+    "formatOpen": { "message": "Any" },
+    "matchLabel": { "message": "Match" },
+    "noteLabel": { "message": "Note (optional)" },
+    "notePlaceholder": { "message": "New player, looking for practice" },
+    "publishButton": { "message": "Post to the board" },
+    "publishing": { "message": "Posting…" },
+    "extendButton": {
+        "message": "Another $MINUTES$ min",
+        "placeholders": { "minutes": { "content": "$1", "example": "20" } }
+    },
+    "takeDownButton": { "message": "Take down" },
+    "boardTimeLeft": {
+        "message": "$MINUTES$ min left on the board",
+        "placeholders": { "minutes": { "content": "$1", "example": "12" } }
+    },
+
+    "deckHeading": { "message": "Deck check" },
+    "deckAllLegal": {
+        "message": "✓ All $COUNT$ cards are within $WAVE$",
+        "placeholders": {
+            "count": { "content": "$1", "example": "23" },
+            "wave": { "content": "$2", "example": "Set 1" }
+        }
+    },
+    "deckOverLimit": {
+        "message": "✗ $COUNT$ cards are outside $WAVE$",
+        "placeholders": {
+            "count": { "content": "$1", "example": "2" },
+            "wave": { "content": "$2", "example": "Set 1" }
+        }
+    },
+    "deckMore": {
+        "message": "⋯and $COUNT$ more",
+        "placeholders": { "count": { "content": "$1", "example": "4" } }
+    },
+    "deckUnknown": {
+        "message": "$COUNT$ more from unrecognised sets, not counted.",
+        "placeholders": { "count": { "content": "$1", "example": "1" } }
+    },
+    "deckNoSets": { "message": "Format data unavailable, can't check right now." },
+
+    "boardHeading": { "message": "Waiting for opponents" },
+    "boardHeadingCount": {
+        "message": "Waiting for opponents ($COUNT$)",
+        "placeholders": { "count": { "content": "$1", "example": "3" } }
+    },
+    "boardEmpty": { "message": "Nobody is waiting right now." },
+    "boardUnavailable": { "message": "Can't reach the board." },
+    "joinButton": { "message": "Join" },
+    "currentFormatFallback": { "message": "current format" },
+
+    "errNickname": { "message": "Add a name so people know who's waiting." },
+    "errPublish": { "message": "Couldn't post it" },
+    "errTakeDown": { "message": "Couldn't take it down" },
+    "errNoResponse": { "message": "No response" },
+    "errReloaded": { "message": "The extension just updated — reload this page" }
+}

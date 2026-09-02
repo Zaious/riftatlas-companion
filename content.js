@@ -34,6 +34,13 @@
     /** 實測的卡圖路徑：riftbound/cards/zh-CN/original/OGN-004.webp */
     const CARD_IMG_RE = /\/cards\/[^/]+\/original\/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)+)\.webp/;
 
+    /**
+     * 介面字串一律走 chrome.i18n，語言由瀏覽器決定：_locales/zh_TW 是預設，
+     * _locales/en 給其他語系。找不到鍵時回傳鍵名本身而不是空字串——那樣壞掉的
+     * 是一個字，不是整塊面板。
+     */
+    const t = (key, ...args) => chrome.i18n.getMessage(key, args.map(String)) || key;
+
     // ---------- 從 Rift Atlas 讀狀態（只讀） ----------
 
     function readSession() {
@@ -118,11 +125,11 @@
                 chrome.runtime.sendMessage(message, (reply) => {
                     // 擴充被更新或停用時 sendMessage 會留下 lastError；讀掉它，否則
                     // Chrome 會把它當成未處理的錯誤印在主控台。
-                    if (chrome.runtime.lastError) return resolve({ ok: false, error: "擴充剛更新過，重新整理這一頁就好" });
-                    resolve(reply ?? { ok: false, error: "沒有回應" });
+                    if (chrome.runtime.lastError) return resolve({ ok: false, error: t("errReloaded") });
+                    resolve(reply ?? { ok: false, error: t("errNoResponse") });
                 });
             } catch {
-                resolve({ ok: false, error: "沒有回應" });
+                resolve({ ok: false, error: t("errNoResponse") });
             }
         });
     }
@@ -296,29 +303,29 @@
 
     function renderLegality(state) {
         if (!state.cards || state.cards.size === 0) return "";
-        if (!state.sets) return `<div class="sec"><h4>牌組檢查</h4><p class="muted">環境資料讀不到，暫時無法判定。</p></div>`;
+        if (!state.sets) return `<div class="sec"><h4>${escapeHtml(t("deckHeading"))}</h4><p class="muted">${escapeHtml(t("deckNoSets"))}</p></div>`;
 
         const { total, over, unknown } = checkLegality(state.cards, state.sets.byCode, state.sets.currentWave);
         const label = state.sets.currentWaveLabel;
 
         const verdict =
             over.length === 0
-                ? `<p class="ok">✓ ${total} 張卡都在${escapeHtml(label)}以內</p>`
-                : `<p class="warn">✗ ${over.length} 張超出${escapeHtml(label)}</p><ul>${over
+                ? `<p class="ok">${escapeHtml(t("deckAllLegal", total, label))}</p>`
+                : `<p class="warn">${escapeHtml(t("deckOverLimit", over.length, label))}</p><ul>${over
                       .slice(0, 6)
                       .map((card) => `<li>${escapeHtml(card.label)} <span class="muted">${escapeHtml(card.id)}</span></li>`)
-                      .join("")}${over.length > 6 ? `<li class="muted">⋯還有 ${over.length - 6} 張</li>` : ""}</ul>`;
+                      .join("")}${over.length > 6 ? `<li class="muted">${escapeHtml(t("deckMore", over.length - 6))}</li>` : ""}</ul>`;
 
-        const caveat = unknown > 0 ? `<p class="muted">另有 ${unknown} 張認不出系列，沒有計入。</p>` : "";
-        return `<div class="sec"><h4>牌組檢查</h4>${verdict}${caveat}</div>`;
+        const caveat = unknown > 0 ? `<p class="muted">${escapeHtml(t("deckUnknown", unknown))}</p>` : "";
+        return `<div class="sec"><h4>${escapeHtml(t("deckHeading"))}</h4>${verdict}${caveat}</div>`;
     }
 
     function renderMyRoom(state) {
         const code = state.session?.roomCode;
-        const head = `<h4>我的房間<button class="mute push" data-act="sound" title="${soundOn ? "關掉提示音" : "打開提示音"}">${soundOn ? "🔔" : "🔕"}</button></h4>`;
+        const head = `<h4>${escapeHtml(t("myRoomHeading"))}<button class="mute push" data-act="sound" title="${escapeHtml(t(soundOn ? "soundOff" : "soundOn"))}">${soundOn ? "🔔" : "🔕"}</button></h4>`;
 
         if (!code) {
-            return `<div class="sec">${head}<p class="muted">在 Rift Atlas 建立房間之後，這裡就能把房號掛上布告欄。</p></div>`;
+            return `<div class="sec">${head}<p class="muted">${escapeHtml(t("noRoomYet"))}</p></div>`;
         }
 
         if (state.posted) {
@@ -326,11 +333,11 @@
             return `<div class="sec">${head}
                 <div class="row">
                     <span class="name"><code>${escapeHtml(code)}</code></span>
-                    <span class="tag push ok">板上還有 ${left} 分鐘</span>
+                    <span class="tag push ok">${escapeHtml(t("boardTimeLeft", left))}</span>
                 </div>
                 <div class="pair">
-                    <button data-act="publish" ${state.busy ? "disabled" : ""}>再撐 20 分鐘</button>
-                    <button class="ghost" data-act="takeDown" ${state.busy ? "disabled" : ""}>收掉</button>
+                    <button data-act="publish" ${state.busy ? "disabled" : ""}>${escapeHtml(t("extendButton", 20))}</button>
+                    <button class="ghost" data-act="takeDown" ${state.busy ? "disabled" : ""}>${escapeHtml(t("takeDownButton"))}</button>
                 </div>
                 ${state.message ? `<p class="${state.messageKind || "muted"}" style="margin-top:7px">${escapeHtml(state.message)}</p>` : ""}
             </div>`;
@@ -339,43 +346,43 @@
         const suggested = escapeHtml(state.draft.nickname);
         return `<div class="sec">${head}
             <div class="row"><span class="name"><code>${escapeHtml(code)}</code></span></div>
-            <label class="field"><span>你的稱呼</span><input data-f="nickname" maxlength="20" value="${suggested}" placeholder="小明"></label>
+            <label class="field"><span>${escapeHtml(t("nicknameLabel"))}</span><input data-f="nickname" maxlength="20" value="${suggested}" placeholder="${escapeHtml(t("nicknamePlaceholder"))}"></label>
             <div class="pair" style="margin-bottom:6px">
-                <label class="field" style="margin:0"><span>環境</span><select data-f="format">
-                    <option value="current"${state.draft.format === "current" ? " selected" : ""}>只打${escapeHtml(state.sets?.currentWaveLabel || "當前環境")}</option>
-                    <option value="open"${state.draft.format === "open" ? " selected" : ""}>不限</option>
+                <label class="field" style="margin:0"><span>${escapeHtml(t("formatLabel"))}</span><select data-f="format">
+                    <option value="current"${state.draft.format === "current" ? " selected" : ""}>${escapeHtml(t("formatCurrent", state.sets?.currentWaveLabel || t("currentFormatFallback")))}</option>
+                    <option value="open"${state.draft.format === "open" ? " selected" : ""}>${escapeHtml(t("formatOpen"))}</option>
                 </select></label>
-                <label class="field" style="margin:0"><span>賽制</span><select data-f="matchMode">
+                <label class="field" style="margin:0"><span>${escapeHtml(t("matchLabel"))}</span><select data-f="matchMode">
                     <option value="bo1"${state.draft.matchMode === "bo1" ? " selected" : ""}>BO1</option>
                     <option value="bo3"${state.draft.matchMode === "bo3" ? " selected" : ""}>BO3</option>
                 </select></label>
             </div>
-            <label class="field"><span>備註（選填）</span><input data-f="note" maxlength="40" value="${escapeHtml(state.draft.note)}" placeholder="新手，想找人陪練"></label>
-            <button class="block" data-act="publish" ${state.busy ? "disabled" : ""}>${state.busy ? "掛出中…" : "掛到布告欄等對手"}</button>
+            <label class="field"><span>${escapeHtml(t("noteLabel"))}</span><input data-f="note" maxlength="40" value="${escapeHtml(state.draft.note)}" placeholder="${escapeHtml(t("notePlaceholder"))}"></label>
+            <button class="block" data-act="publish" ${state.busy ? "disabled" : ""}>${escapeHtml(state.busy ? t("publishing") : t("publishButton"))}</button>
             ${state.message ? `<p class="${state.messageKind || "muted"}" style="margin-top:7px">${escapeHtml(state.message)}</p>` : ""}
         </div>`;
     }
 
     function renderBoard(state) {
         if (!state.rooms) {
-            return `<div class="sec"><h4>正在等對手</h4><p class="muted">讀不到布告欄。</p></div>`;
+            return `<div class="sec"><h4>${escapeHtml(t("boardHeading"))}</h4><p class="muted">${escapeHtml(t("boardUnavailable"))}</p></div>`;
         }
         const others = state.rooms.filter((room) => room.roomCode !== state.session?.roomCode);
         if (others.length === 0) {
-            return `<div class="sec"><h4>正在等對手</h4><p class="muted">現在沒有人在等。</p></div>`;
+            return `<div class="sec"><h4>${escapeHtml(t("boardHeading"))}</h4><p class="muted">${escapeHtml(t("boardEmpty"))}</p></div>`;
         }
         const rows = others
             .slice(0, 8)
             .map(
                 (room) => `<div class="row">
                     <span class="name">${escapeHtml(room.nickname)}</span>
-                    <span class="tag${room.format === "current" ? " cur" : ""}">${room.format === "current" ? escapeHtml(state.boardLabel || "當前環境") : "不限"}</span>
+                    <span class="tag${room.format === "current" ? " cur" : ""}">${escapeHtml(room.format === "current" ? (state.boardLabel || t("currentFormatFallback")) : t("formatOpen"))}</span>
                     <span class="tag">${escapeHtml(room.matchMode.toUpperCase())}</span>
-                    <button class="push" data-join="${escapeHtml(room.roomCode)}">加入</button>
+                    <button class="push" data-join="${escapeHtml(room.roomCode)}">${escapeHtml(t("joinButton"))}</button>
                 </div>`,
             )
             .join("");
-        return `<div class="sec"><h4>正在等對手（${others.length}）</h4>${rows}</div>`;
+        return `<div class="sec"><h4>${escapeHtml(t("boardHeadingCount", others.length))}</h4>${rows}</div>`;
     }
 
     function render(state) {
@@ -383,9 +390,9 @@
         const container = root.lastElementChild;
         // 等的人數放標題列，收合時也看得見——那是這塊面板唯一一句「現在值得展開」。
         const waiting = state.rooms ? state.rooms.filter((room) => room.roomCode !== state.session?.roomCode).length : 0;
-        const badge = waiting > 0 ? `<span class="badge">${waiting} 人在等</span>` : "";
+        const badge = waiting > 0 ? `<span class="badge">${escapeHtml(t("waitingBadge", waiting))}</span>` : "";
         const panel = h(`<div class="panel${collapsed ? " collapsed" : ""}">
-            <div class="head"><b>編年史助手</b>${badge}<span class="sp">${collapsed ? "▴" : "▾"}</span></div>
+            <div class="head"><b>${escapeHtml(t("panelTitle"))}</b>${badge}<span class="sp">${collapsed ? "▴" : "▾"}</span></div>
             <div class="body">
                 ${renderMyRoom(state)}
                 ${renderLegality(state)}
@@ -447,7 +454,7 @@
         if (!code || state.busy) return;
         const nickname = (state.draft.nickname || "").trim();
         if (!nickname) {
-            state.message = "留個稱呼，對方才知道等的是誰。";
+            state.message = t("errNickname");
             state.messageKind = "warn";
             return render(state);
         }
@@ -473,7 +480,7 @@
             state.message = null;
             void refreshBoard(state);
         } else {
-            state.message = reply.error || "掛出去失敗了";
+            state.message = reply.error || t("errPublish");
             state.messageKind = "err";
         }
         render(state);
@@ -491,7 +498,7 @@
             state.message = null;
             void refreshBoard(state);
         } else {
-            state.message = reply.error || "收掉失敗了";
+            state.message = reply.error || t("errTakeDown");
             state.messageKind = "err";
         }
         render(state);
