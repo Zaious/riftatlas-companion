@@ -61,6 +61,19 @@
         }
     }
 
+    /**
+     * 這間房現在該標成「等對手」還是「進行中」。
+     *
+     * 不用猜：Rift Atlas 自己把對局階段寫在 last_room 裡，lobby 是還在等人，
+     * in_game 是已經開打。2026-09-02 實測，對局期間那筆記錄每分鐘都在更新。
+     *
+     * 已知盲點：對手中途離開時 phase 仍是 in_game——它描述的是「你在哪個階段」，
+     * 不是「房裡有幾個人」。那間房會停在進行中，掛房的人自己收掉重掛即可。
+     */
+    function currentStatus() {
+        return state.session?.lastKnownPhase === "lobby" ? "waiting" : "playing";
+    }
+
     /** Rift Atlas 上用的名字，拿來當布告欄暱稱的預設值——同一個人，沒理由問兩次。 */
     function readPlayerName(session) {
         if (session?.playerName) return String(session.playerName).slice(0, 20);
@@ -386,7 +399,8 @@
                     <span class="name">${escapeHtml(room.nickname)}</span>
                     <span class="tag${room.format === "current" ? " cur" : ""}">${escapeHtml(room.format === "current" ? (state.boardLabel || t("currentFormatFallback")) : t("formatOpen"))}</span>
                     <span class="tag">${escapeHtml(room.matchMode.toUpperCase())}</span>
-                    <button class="push" data-join="${escapeHtml(room.roomCode)}">${escapeHtml(t("joinButton"))}</button>
+                    ${room.status === "playing" ? `<span class="tag">${escapeHtml(t("playingTag"))}</span>` : ""}
+                    <button class="push" data-join="${escapeHtml(room.roomCode)}">${escapeHtml(t(room.status === "playing" ? "watchButton" : "joinButton"))}</button>
                 </div>`,
             )
             .join("");
@@ -479,6 +493,7 @@
                 format: state.draft.format,
                 matchMode: state.draft.matchMode,
                 note: state.draft.note,
+                status: currentStatus(),
             },
         });
 
@@ -559,6 +574,20 @@
         // 沒填過就用 Rift Atlas 上的名字。使用者改過之後不再覆蓋——draft 是他的。
         if (!state.draft.nickname) state.draft.nickname = readPlayerName(state.session);
 
+        /*
+          人已經不在房裡了，收下板。
+
+          2026-09-02 實測：正常離開房間之後，Rift Atlas 會把整個 last_room 刪掉
+          ——所以「打完了沒」不必去猜對局結束是哪個 phase，只要問「還在不在房裡」。
+          離開對局頁也是同一件事（readSession 只認 /game）。
+        */
+        if (state.posted && previous && !state.session) {
+            const leaving = state.posted;
+            state.posted = null;
+            void ask({ type: "takeDown" }).then(() => void refreshBoard(state));
+            if (leaving) lastPostedLeft = null;
+        }
+
         // 房號換了（開了新的一間），板上那筆就不是這一間了。
         if (state.posted && state.session?.roomCode !== state.posted.roomCode) state.posted = null;
 
@@ -574,18 +603,15 @@
         if (state.posted && lastPhase === "lobby" && phase && phase !== "lobby") {
             beep("join");
             /*
-              有人進來就把房間收下板。
+              有人進來了：把房間改標成「進行中」，而不是收下板。
 
-              房間已經有對手了，還掛在「正在等對手」上，下一個點進來的人只會撲空
-              ——那比房間消失更傷。收掉是這一刻唯一誠實的動作。
+              收掉的話板會變空，而空板是這個工具現在最大的問題——正在打的房間留
+              著，本身就是「這裡有人在用」的證據。撲空的風險靠標示解決：進行中那
+              組在板上是「觀戰」不是「加入」。
 
-              失敗就算了：到期仍然會清掉它，最多多掛幾分鐘。
+              失敗就算了：下一次心跳（5 分鐘內）會再帶一次狀態。
             */
-            void ask({ type: "takeDown" }).then((reply) => {
-                if (!reply.ok) return;
-                state.posted = null;
-                void refreshBoard(state);
-            });
+            void heartbeat();
         }
         if (previous || phase) lastPhase = phase;
 
@@ -646,6 +672,7 @@
                 format: state.posted.format,
                 matchMode: state.posted.matchMode,
                 note: state.posted.note ?? "",
+                status: currentStatus(),
             },
         });
         if (reply.ok) state.posted = reply.data.room;
