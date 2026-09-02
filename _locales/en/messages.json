@@ -184,5 +184,11 @@
     },
     "errNetwork": {
         "message": "Can't reach Riftbound Chronicle — check your connection"
+    },
+    "errNoAccess": {
+        "message": "This extension doesn't have access to Riftbound Chronicle yet."
+    },
+    "openPermissions": {
+        "message": "Open permissions"
     }
 }

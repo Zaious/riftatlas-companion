@@ -184,5 +184,11 @@
     },
     "errNetwork": {
         "message": "連不上編年史，檢查一下網路再試"
+    },
+    "errNoAccess": {
+        "message": "這個擴充還沒有存取編年史的權限，掛不出去。"
+    },
+    "openPermissions": {
+        "message": "開啟權限設定"
     }
 }

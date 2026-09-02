@@ -390,6 +390,7 @@
             <label class="field"><span>${escapeHtml(t("noteLabel"))}</span><input data-f="note" maxlength="40" value="${escapeHtml(state.draft.note)}" placeholder="${escapeHtml(t("notePlaceholder"))}"></label>
             <button class="block" data-act="publish" ${state.busy ? "disabled" : ""}>${escapeHtml(state.busy ? t("publishing") : t("publishButton"))}</button>
             ${state.message ? `<p class="${state.messageKind || "muted"}" style="margin-top:7px">${escapeHtml(state.message)}</p>` : ""}
+            ${state.needsAccess ? `<button class="block ghost" data-act="access" style="margin-top:7px">${escapeHtml(t("openPermissions"))}</button>` : ""}
         </div>`;
     }
 
@@ -461,6 +462,10 @@
                     render(state);
                     return;
                 }
+                if (act === "access") {
+                    void ask({ type: "openPermissions" });
+                    return;
+                }
                 if (act === "publish") void publish(state);
                 if (act === "takeDown") void takeDown(state);
             });
@@ -510,10 +515,13 @@
         if (reply.ok) {
             state.posted = reply.data.room;
             state.message = null;
+            state.needsAccess = false;
             void refreshBoard(state);
         } else {
             state.message = reply.error || t("errPublish");
             state.messageKind = "err";
+            // 權限被關掉跟連不上網路長得一樣，但只有前者我們能一鍵帶他去修。
+            state.needsAccess = Boolean(reply.needsAccess);
         }
         render(state);
     }
@@ -546,6 +554,7 @@
         boardLabel: null,
         posted: null,
         busy: false,
+        needsAccess: false,
         message: null,
         messageKind: "muted",
         draft: { nickname: "", format: "current", matchMode: "bo1", note: "" },

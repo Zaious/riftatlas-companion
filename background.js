@@ -39,6 +39,22 @@ const SETS_CACHE_MS = 24 * 60 * 60 * 1000;
 const OWNER_KEY = "ownerKey";
 
 /**
+ * 這個擴充現在有沒有連我們網域的權限。
+ *
+ * Chrome 讓使用者逐站控制擴充的存取（「在點選時」／「在特定網站上」），而被關掉
+ * 之後 background 的 fetch 會直接拋 TypeError——跟斷網長得一模一樣。實測有使用
+ * 者就是踩到這個，自己去把「網站存取權」打開才好。那不該由使用者猜。
+ */
+async function hasSiteAccess() {
+    try {
+        return await chrome.permissions.contains({ origins: [`${await siteOrigin()}/*`] });
+    } catch {
+        // 查不出來就別擋路：讓請求照送，失敗時退回一般的網路錯誤訊息。
+        return true;
+    }
+}
+
+/**
  * fetch 在連不上時拋的是 TypeError("Failed to fetch")——那句話對使用者毫無意義，
  * 而它跟「伺服器回了錯誤」是完全不同的兩件事：前者是他那端連不出去（DNS、防火
  * 牆、VPN、離線），後者我們會回一句中文說明。翻成看得懂的話，順便讓回報的人講
@@ -48,7 +64,14 @@ async function fetchOrExplain(url, init) {
     try {
         return await fetch(url, init);
     } catch {
-        throw new Error(chrome.i18n.getMessage("errNetwork") || "連不上編年史，檢查一下網路再試");
+        // 先分辨是哪一種失敗：權限被關掉跟連不上網路，症狀相同但解法完全不同。
+        const error = new Error(
+            (await hasSiteAccess())
+                ? chrome.i18n.getMessage("errNetwork") || "連不上編年史，檢查一下網路再試"
+                : chrome.i18n.getMessage("errNoAccess") || "這個擴充還沒有存取編年史的權限",
+        );
+        error.needsAccess = !(await hasSiteAccess());
+        throw error;
     }
 }
 
@@ -122,13 +145,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
                 ? () => writeRoom("POST", message.room)
                 : message?.type === "takeDown"
                   ? () => writeRoom("DELETE", null)
-                  : null;
+                  : message?.type === "openPermissions"
+                    ? async () => {
+                          // chrome:// 開不了 content script，但 background 可以。
+                          await chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` });
+                          return { opened: true };
+                      }
+                    : null;
 
     if (!handler) return false;
 
     handler()
         .then((data) => sendResponse({ ok: true, data }))
-        .catch((error) => sendResponse({ ok: false, error: String(error?.message ?? error) }));
+        .catch((error) => sendResponse({ ok: false, error: String(error?.message ?? error), needsAccess: Boolean(error?.needsAccess) }));
 
     // 非同步回覆必須明確回 true，否則 channel 會在 sendResponse 之前就關掉。
     return true;
