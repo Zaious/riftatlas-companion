@@ -44,6 +44,14 @@
     // ---------- 從 Rift Atlas 讀狀態（只讀） ----------
 
     function readSession() {
+        /*
+          只有真的在對局頁才算「我的房間」。
+
+          Rift Atlas 在大廳會留著上一場的房號給你「接管」，而那間房你可能早就離開
+          了——把它當成當前房間掛上布告欄，別人點進去就撲空。這一行把殘影擋掉：
+          面板在大廳只做看板與加入，掛房號要在房間裡。
+        */
+        if (!location.pathname.includes("/game")) return null;
         try {
             const raw = localStorage.getItem(ROOM_KEY);
             if (!raw) return null;
