@@ -121,6 +121,47 @@ async function ownerKey() {
     return key;
 }
 
+/**
+ * 續掛由 service worker 的鬧鐘負責，不由分頁的計時器。
+ *
+ * 掛著房間去做別的事，正是最常見的等待方式——而那個分頁一旦退到背景，Chrome 會
+ * 節流甚至凍結它的 setInterval，房間於是在人還在等的時候悄悄過期。chrome.alarms
+ * 跑在 service worker 上，不受分頁生命週期影響。
+ *
+ * 分頁關掉時 content script 會主動收掉房間並取消鬧鐘；關掉整個瀏覽器的話鬧鐘跟著
+ * 停，房間照 20 分鐘的到期自然下板——那正是我們要的收尾。
+ */
+const ALARM_NAME = "renew-room";
+const POSTED_KEY = "postedRoom";
+
+async function scheduleRenewal(room) {
+    await chrome.storage.local.set({ [POSTED_KEY]: room });
+    // 比 20 分鐘的到期短得多，錯過一次也還有餘裕。
+    await chrome.alarms.create(ALARM_NAME, { periodInMinutes: 4 });
+}
+
+async function cancelRenewal() {
+    await chrome.storage.local.remove(POSTED_KEY);
+    await chrome.alarms.clear(ALARM_NAME);
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name !== ALARM_NAME) return;
+    void (async () => {
+        const stored = await chrome.storage.local.get(POSTED_KEY);
+        const room = stored[POSTED_KEY];
+        if (!room) {
+            await chrome.alarms.clear(ALARM_NAME);
+            return;
+        }
+        try {
+            await writeRoom("POST", room);
+        } catch {
+            // 續不掛就讓它到期：這裡沒有人可以通知，硬重試只會把錯誤堆在背景。
+        }
+    })();
+});
+
 /** 掛出／收掉。兩者都帶同一把憑證，伺服器據此決定動得了哪一列。 */
 async function writeRoom(method, room) {
     const response = await fetchOrExplain(`${await siteOrigin()}/api/rooms`, {
@@ -142,9 +183,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             : message?.type === "cardSets"
               ? loadCardSets
               : message?.type === "publish"
-                ? () => writeRoom("POST", message.room)
+                ? async () => {
+                      const data = await writeRoom("POST", message.room);
+                      await scheduleRenewal(message.room);
+                      return data;
+                  }
                 : message?.type === "takeDown"
-                  ? () => writeRoom("DELETE", null)
+                  ? async () => {
+                        await cancelRenewal();
+                        return writeRoom("DELETE", null);
+                    }
                   : message?.type === "openPermissions"
                     ? async () => {
                           // chrome:// 開不了 content script，但 background 可以。

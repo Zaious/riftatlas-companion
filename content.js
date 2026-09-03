@@ -720,7 +720,12 @@
      * bfcache 判定為不可快取。送不出去也沒關係，到期仍然是兜底。
      */
     function releaseOnExit() {
-        window.addEventListener("pagehide", () => {
+        window.addEventListener("pagehide", (event) => {
+            /*
+              persisted 為真代表頁面只是被收進 bfcache——上一頁、之後可能原封不動
+              回來。那不是離開，房間不該收掉。真的關掉分頁或導航離開時它是 false。
+            */
+            if (event.persisted) return;
             if (state.posted) void ask({ type: "takeDown" });
         });
     }
