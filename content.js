@@ -69,7 +69,16 @@
               這個擴充最主要的用途——網址並不長那樣，於是面板完全認不出你在房裡。
             */
             const age = Date.now() - Number(record?.updatedAt ?? 0);
-            if (!Number.isFinite(age) || age > STALE_SESSION_MS) return null;
+            /*
+              只有分頁看得見的時候，「這筆記錄很舊」才代表人走了。
+
+              退到背景時 Chrome 會凍住頁面的計時器——包括 Rift Atlas 自己那個，所
+              以它也停止更新這筆記錄。拿新鮮度去判斷，會把「瀏覽器把大家都凍住了」
+              讀成「這個人離開了」，然後盡責地把還在等對手的房間收下板。實測過：
+              掛出後切到別的視窗，四分鐘內房間就沒了。
+            */
+            const canJudgeAbsence = document.visibilityState === "visible";
+            if (canJudgeAbsence && (!Number.isFinite(age) || age > STALE_SESSION_MS)) return null;
             /*
               觀戰者不是這間房的人。
 
@@ -613,7 +622,8 @@
           ——所以「打完了沒」不必去猜對局結束是哪個 phase，只要問「還在不在房裡」。
           離開對局頁也是同一件事（readSession 只認 /game）。
         */
-        if (state.posted && previous && !state.session) {
+        // 同一個道理：背景分頁讀不出「人在不在」，那時不該收掉任何東西。
+        if (document.visibilityState === "visible" && state.posted && previous && !state.session) {
             const leaving = state.posted;
             state.posted = null;
             void ask({ type: "takeDown" }).then(() => void refreshBoard(state));
