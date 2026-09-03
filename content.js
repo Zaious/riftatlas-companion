@@ -28,6 +28,13 @@
     const BOARD_POLL_MS = 30000;
     /** 續掛的節奏。比 20 分鐘的到期短得多，人還在等就不該被下板。 */
     const HEARTBEAT_MS = 5 * 60000;
+    /**
+     * last_room 多久沒更新就當成殘影。
+     *
+     * Rift Atlas 在房間裡每分鐘內都會刷新那筆記錄，所以三分鐘給了三次機會；離開
+     * 之後它不再更新，超過這個歲數就不該再被當成「我的房間」。
+     */
+    const STALE_SESSION_MS = 3 * 60000;
 
     const ROOM_KEY = "riftbound_simulator_last_room";
     const NAME_KEY = "riftbound_simulator_player_name";
@@ -44,18 +51,25 @@
     // ---------- 從 Rift Atlas 讀狀態（只讀） ----------
 
     function readSession() {
-        /*
-          只有真的在對局頁才算「我的房間」。
-
-          Rift Atlas 在大廳會留著上一場的房號給你「接管」，而那間房你可能早就離開
-          了——把它當成當前房間掛上布告欄，別人點進去就撲空。這一行把殘影擋掉：
-          面板在大廳只做看板與加入，掛房號要在房間裡。
-        */
-        if (!location.pathname.includes("/game")) return null;
         try {
             const raw = localStorage.getItem(ROOM_KEY);
             if (!raw) return null;
-            const session = JSON.parse(raw)?.session ?? null;
+            const record = JSON.parse(raw);
+            const session = record?.session ?? null;
+            /*
+              還在房裡嗎——用這筆記錄的新鮮度判斷，不用網址。
+
+              Rift Atlas 在房間裡會持續更新 last_room：實測等對手（lobby）與對局中
+              （in_game）都在一分鐘以內。人離開之後它就不再動，而大廳那個「可以恢
+              復」的殘影正是這個樣子——把它當成當前房間掛上布告欄，別人點進去會撲
+              空。
+
+              先前這裡是用 location.pathname 含不含 "/game" 來判斷，那是錯的：那個
+              條件只在單人練習與加入別人的房間成立，而「自己開房等對手」——也就是
+              這個擴充最主要的用途——網址並不長那樣，於是面板完全認不出你在房裡。
+            */
+            const age = Date.now() - Number(record?.updatedAt ?? 0);
+            if (!Number.isFinite(age) || age > STALE_SESSION_MS) return null;
             /*
               觀戰者不是這間房的人。
 
