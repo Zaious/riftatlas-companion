@@ -46,7 +46,32 @@
      * _locales/en 給其他語系。找不到鍵時回傳鍵名本身而不是空字串——那樣壞掉的
      * 是一個字，不是整塊面板。
      */
-    const t = (key, ...args) => chrome.i18n.getMessage(key, args.map(String)) || key;
+    const t = (key, ...args) => {
+        // 擴充被重新載入之後，還留在頁面上的這份 content script 會失去它的 extension
+        // context——此後任何 chrome.* 呼叫都拋 "Extension context invalidated"。那個
+        // 例外從 render 裡冒出來會讓整塊面板畫不出來，使用者只看到面板消失，得自己
+        // 想到要重整。回鍵名至少讓版面還在。
+        try {
+            return chrome.i18n.getMessage(key, args.map(String)) || key;
+        } catch {
+            return key;
+        }
+    };
+
+    /**
+     * 這份 content script 還連得上它的擴充嗎。
+     *
+     * 重新載入或更新擴充之後，舊分頁裡的這份就成了孤兒：計時器照跑，但每一次
+     * chrome.* 都會拋錯。與其讓它每兩秒噴一個例外，不如停下來，並在面板上說一句
+     * 「重新整理這一頁」——那是使用者唯一需要做的動作。
+     */
+    function extensionAlive() {
+        try {
+            return Boolean(chrome.runtime?.id);
+        } catch {
+            return false;
+        }
+    }
 
     // ---------- 從 Rift Atlas 讀狀態（只讀） ----------
 
@@ -746,9 +771,27 @@
         void loadSets();
         void refreshBoard(state);
         refreshLocal();
-        setInterval(refreshLocal, LOCAL_POLL_MS);
-        setInterval(() => void refreshBoard(state), BOARD_POLL_MS);
-        setInterval(() => void heartbeat(), HEARTBEAT_MS);
+        /*
+          擴充一被重新載入，這份 content script 就成了孤兒——留著跑只會每兩秒噴一
+          個 "Extension context invalidated"，而面板早就不會動了。停掉計時器，把面
+          板換成一句話，使用者重整一次就好。
+        */
+        const timers = [];
+        const orphanWatch = setInterval(() => {
+            if (extensionAlive()) return;
+            clearInterval(orphanWatch);
+            for (const timer of timers) clearInterval(timer);
+            const container = root?.lastElementChild;
+            if (container) {
+                container.replaceChildren(
+                    h(`<div class="panel"><div class="head"><b>${escapeHtml(t("panelTitle"))}</b></div><div class="body"><p class="muted">${escapeHtml(t("errReloaded"))}</p></div></div>`).firstElementChild,
+                );
+            }
+        }, 2000);
+
+        timers.push(setInterval(refreshLocal, LOCAL_POLL_MS));
+        timers.push(setInterval(() => void refreshBoard(state), BOARD_POLL_MS));
+        timers.push(setInterval(() => void heartbeat(), HEARTBEAT_MS));
         releaseOnExit();
     }
 
