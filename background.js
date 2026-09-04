@@ -199,7 +199,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
                           await chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` });
                           return { opened: true };
                       }
-                    : null;
+                    : message?.type === "openBoard"
+                      ? async () => {
+                            // 位址走 siteOrigin()，開發時跟著 siteOverride 指到本機。
+                            await chrome.tabs.create({ url: `${await siteOrigin()}/rooms` });
+                            return { opened: true };
+                        }
+                      : null;
 
     if (!handler) return false;
 

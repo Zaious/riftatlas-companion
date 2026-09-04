@@ -190,5 +190,11 @@
     },
     "openPermissions": {
         "message": "Open permissions"
+    },
+    "boardOnSite": {
+        "message": "Full board ↗"
+    },
+    "boardOnSiteTitle": {
+        "message": "Open the board on the website"
     }
 }

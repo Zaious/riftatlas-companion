@@ -300,6 +300,7 @@
     button.block { width: 100%; padding: 7px; font-weight: 700; }
     button.ghost { border-color: #2a3350; color: #9fb0d0; }
     button.ghost:hover:not(:disabled) { background: #1c2540; color: #edf4ff; }
+    button.mute.right { font-size: 11px; }
     button.mute {
         border: 0; padding: 0 2px; color: #7d89a8; font-size: 13px; line-height: 1;
     }
@@ -444,12 +445,20 @@
     }
 
     function renderBoard(state) {
+        /*
+          面板只放得下八筆，而板是空的時候這一塊本來是條死路——「現在沒有人在等」
+          之後無處可去。標題右邊固定留一個出口，三種狀態都在：網站上的看板分了
+          等待中與進行中兩區，而且那個網址可以直接丟給還沒裝擴充的人。
+        */
+        const head = (text) =>
+            `<h4>${escapeHtml(text)}<button class="mute right" data-act="board" title="${escapeHtml(t("boardOnSiteTitle"))}">${escapeHtml(t("boardOnSite"))}</button></h4>`;
+
         if (!state.rooms) {
-            return `<div class="sec"><h4>${escapeHtml(t("boardHeading"))}</h4><p class="muted">${escapeHtml(t("boardUnavailable"))}</p></div>`;
+            return `<div class="sec">${head(t("boardHeading"))}<p class="muted">${escapeHtml(t("boardUnavailable"))}</p></div>`;
         }
         const others = state.rooms.filter((room) => room.roomCode !== state.session?.roomCode);
         if (others.length === 0) {
-            return `<div class="sec"><h4>${escapeHtml(t("boardHeading"))}</h4><p class="muted">${escapeHtml(t("boardEmpty"))}</p></div>`;
+            return `<div class="sec">${head(t("boardHeading"))}<p class="muted">${escapeHtml(t("boardEmpty"))}</p></div>`;
         }
         const rows = others
             .slice(0, 8)
@@ -463,7 +472,7 @@
                 </div>`,
             )
             .join("");
-        return `<div class="sec"><h4>${escapeHtml(t("boardHeadingCount", others.length))}</h4>${rows}</div>`;
+        return `<div class="sec">${head(t("boardHeadingCount", others.length))}${rows}</div>`;
     }
 
     function render(state) {
@@ -513,6 +522,11 @@
                 }
                 if (act === "access") {
                     void ask({ type: "openPermissions" });
+                    return;
+                }
+                if (act === "board") {
+                    // 位址由 background 決定：開發時它會指到本機（siteOverride）。
+                    void ask({ type: "openBoard" });
                     return;
                 }
                 if (act === "publish") void publish(state);

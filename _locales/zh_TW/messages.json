@@ -190,5 +190,11 @@
     },
     "openPermissions": {
         "message": "開啟權限設定"
+    },
+    "boardOnSite": {
+        "message": "完整看板 ↗"
+    },
+    "boardOnSiteTitle": {
+        "message": "在網站開啟布告欄"
     }
 }
