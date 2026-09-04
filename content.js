@@ -411,6 +411,7 @@
             return `<div class="sec">${head}
                 <div class="row">
                     <span class="name"><code>${escapeHtml(code)}</code></span>
+                    ${state.posted.status === "playing" ? `<span class="tag">${escapeHtml(t("playingTag"))}</span>` : ""}
                     <span class="tag push ok">${escapeHtml(t("boardTimeLeft", left))}</span>
                 </div>
                 <div class="pair">
